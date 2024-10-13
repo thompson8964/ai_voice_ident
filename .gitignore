@@ -1,0 +1,14 @@
+.venv
+audiobooks
+checkpoint
+clonedSources
+data
+fake
+real
+sourcesForCloning
+temp
+.idea
+*.zip
+*.mp3
+*.keras
+*.toml
