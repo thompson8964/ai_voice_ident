@@ -24,20 +24,24 @@ def isQuiet(np_slice, threshold=0.1, percent=0.9):
   # print(numUnderThresh, np_size)
   return (numUnderThresh / len(np_slice) ) > percent
 
-sourcePath = r"fake/"
-savePath = r"fake_spects/"
+sourcePath = r"real/"
+savePath = r"real_spects/"
 counter = 0
 
-for filepath in tqdm(glob.glob(sourcePath + "*.mp3")[41:]):
+# ffmpeg_path = r'C:\Users\Thomas Song\PycharmProjects\audioBackend\ffmpeg_win'
+# os.environ['PATH'] = ffmpeg_path + ':' + os.environ['PATH']
+
+for filepath in tqdm(glob.glob(sourcePath + "*.mp3")[40:]):
   filename = Path(filepath).name
   print("loading: " + filename)
   amp, sr = librosa.load(sourcePath + filename)
+  duration = librosa.get_duration(y=amp, sr=sr)
   # amps[str(filename)] = [amp, sr]
   #
   #
   # amp = amps[str(filename)][0]
   # sr = amps[str(filename)][1]
-  for i in range(100):
+  for i in range(int(duration/3)):
     amp_slice = getSlice(amp, 3, sr)
     if isQuiet((amp_slice)):
       amp_slice = getSlice(amp, 3, sr)
