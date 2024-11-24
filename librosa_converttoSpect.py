@@ -31,7 +31,7 @@ counter = 0
 # ffmpeg_path = r'C:\Users\Thomas Song\PycharmProjects\audioBackend\ffmpeg_win'
 # os.environ['PATH'] = ffmpeg_path + ':' + os.environ['PATH']
 
-for filepath in tqdm(glob.glob(sourcePath + "*.mp3")[40:]):
+for filepath in tqdm(glob.glob(sourcePath + "*.mp3")[105:]):
   filename = Path(filepath).name
   print("loading: " + filename)
   amp, sr = librosa.load(sourcePath + filename)
