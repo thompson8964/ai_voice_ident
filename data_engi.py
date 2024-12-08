@@ -8,6 +8,9 @@ import os
 from tqdm import tqdm
 import csv
 import random
+import argparse
+
+
 def getSlice(array, duration, sr):
   length = len(array) / sr
   start = random.uniform(0, length - duration)
@@ -47,7 +50,7 @@ def extract_audio_features(file_path, is_fake):
         # Chroma STFT (Chromagram) it's an average value for the 12 music notes, with a shape of (12, )
         chroma_stft = librosa.feature.chroma_stft(y=y, sr=sr).mean(axis=1)
         for i, note in enumerate(chroma_stft):
-            features[f"chroma_stft_{i}"] = note
+            features[f"chroma_stft_{i}"] = note #shape error caused by 2 audio channels; solve by converting to mono channel audio
 
 
         # RMS (Root Mean Square)
@@ -79,36 +82,61 @@ def extract_audio_features(file_path, is_fake):
     return list_features
 
 
-def extra_audio_features_multiple(folder_path, is_fake, csv_path):
-    df_existing = None
-    if os.path.exists(csv_path):
-        df_existing = pd.read_csv("audio.csv")
+def extra_audio_features_multiple(folder_path, is_fake, csv_path_test, csv_path_train):
+    df_existing_test = None
+    df_existing_train = None
+    if os.path.exists(csv_path_test):
+        df_existing_test = pd.read_csv(csv_path_test)
+    if os.path.exists(csv_path_train):
+        df_existing_train = pd.read_csv(csv_path_train)
 
     df_combined = None
-    list_dict = []
-    for filepath in tqdm(glob.glob(os.path.join(folder_path, "*.mp3"))):
-        if df_existing is not None and "file_path" in df_existing.columns and filepath in df_existing["file_path"]:
-            continue
+    list_dict_test = []
+    list_dict_train = []
+    for index, filepath in enumerate(tqdm(glob.glob(os.path.join(folder_path, "*.mp3")))):
 
         try:
             list_of_d = extract_audio_features(filepath, is_fake)
-        except:
+        except Exception as e:
             print("Error occurred during audio feature: " + filepath)
+            print(e)
             continue
-        list_dict += list_of_d
+        if index % 5 == 0:
+            if df_existing_test is not None and "file_path" in df_existing_test.columns and filepath in df_existing_test["file_path"]:
+                continue
+            list_dict_test += list_of_d
 
-        df_new = pd.DataFrame(list_dict)
-        df_combined = pd.concat([df_existing, df_new], axis=0)
-        df_existing = df_combined
-        list_dict = []
-        df_combined.to_csv(csv_path, index=False)
-    return df_combined
+            df_combined_test = pd.concat([df_existing_test, pd.DataFrame(list_dict_test)], axis=0)
+            df_existing_test = df_combined_test
+            list_dict_test = []
+
+            df_combined_test.to_csv(csv_path_test, index=False)
+        else:
+            if df_existing_train is not None and "file_path" in df_existing_train.columns and filepath in df_existing_train["file_path"]:
+                continue
+            list_dict_train += list_of_d
+
+            df_combined_train = pd.concat([df_existing_train, pd.DataFrame(list_dict_train)], axis=0)
+            df_existing_train = df_combined_train
+            list_dict_train = []
+
+            df_combined_train.to_csv(csv_path_train, index=False)
+
+    return pd.concat([df_combined_train, df_combined_test])
 
 
 if __name__ == "__main__":
-    extra_audio_features_multiple("real_mpeg", False, "audio_real.csv")
-    # dict_1 = extract_audio_features(r"warrenCloned.mp3", False)
-   # print(f'{dict_1}')
-  #  df = pd.DataFrame([dict_1, dict_2, dict_3])
-  #  df['is_fake'] = False
-   # print(df)
+    arg_parser = argparse.ArgumentParser()
+    arg_parser.add_argument("--folder_path", "-f", required=True, help="Process audio files in this folder")
+    arg_parser.add_argument("--is_real", required=True, help="If the audio is AI generated", type=int, default=0)
+    arg_parser.add_argument("--test_path", required=True, help="csv path for testing audio")
+    arg_parser.add_argument("--train_path", required=True, help="csv path for training audio")
+    args = arg_parser.parse_args()
+
+    # extra_audio_features_multiple("real_mpeg", False, "audio_real_test.csv", "audio_real_train.csv")
+    extra_audio_features_multiple(
+        folder_path=args.folder_path,
+        is_fake=bool(not args.is_real),
+        csv_path_test=args.test_path,
+        csv_path_train=args.train_path,
+    )
